@@ -35,6 +35,16 @@
 /* To the the UUID (found the the TA's h-file(s)) */
 #include <TEEencrypt_ta.h>
 
+
+//RSA=================================================
+#define RSA_KEY_SIZE 1024
+#define RSA_MAX_PLAIN_LEN_1024 86 // (1024/8) - 42 (padding)
+#define RSA_CIPHER_LEN_1024 (RSA_KEY_SIZE / 8)
+
+char clear[RSA_MAX_PLAIN_LEN_1024];
+char ciph[RSA_CIPHER_LEN_1024];
+//====================================================
+
 int main(int argc, char* argv[])	// for input file
 {
 	TEEC_Result res;
@@ -97,8 +107,8 @@ int main(int argc, char* argv[])	// for input file
 		printf("key : %d\n", op.params[1].value.a);
 
 		// make enc file
-		FILE *encFile = fopen("encrypted_file.txt", "w+");
-		if(encFile == NULL)		//if not found
+		FILE *encFile = fopen("encrypted_file.txt", "w+");	// delete old text
+		if(encFile == NULL)				//if not found
 			return 0;
 		fwrite(ciphertext, strlen(ciphertext), 1, encFile);
 		fprintf(encFile, "%d", op.params[1].value.a);
@@ -142,6 +152,62 @@ int main(int argc, char* argv[])	// for input file
 		fclose(decfile);
 	}
 	
+	else if(strcmp(argv[3], "R") == 0)
+	{
+		printf("========================RSA========================\n");
+
+		op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT,
+					 		TEEC_MEMREF_TEMP_OUTPUT,
+					 		TEEC_NONE, TEEC_NONE);
+	
+		op.params[0].tmpref.buffer = clear;
+		op.params[0].tmpref.size =  RSA_MAX_PLAIN_LEN_1024;
+		op.params[1].tmpref.buffer = ciph;
+		op.params[1].tmpref.size =  RSA_CIPHER_LEN_1024;
+		
+		if (!strcmp(argv[1], "-e")){		
+		// read file
+		FILE *pf = fopen(argv[2], "r");
+		if (pf == NULL){
+			printf("not found %s file\n", argv[2]);
+			return 0;		
+		}
+		fgets(clear, sizeof(clear), pf);
+		fclose(pf);
+
+		// generate key
+		res = TEEC_InvokeCommand(&sess, TA_RSA_CMD_GENKEYS, &op, &err_origin);
+
+		// encrypt		
+		res = TEEC_InvokeCommand(&sess, TA_RSA_CMD_ENCRYPT,
+				 &op, &err_origin);
+
+		
+		// print rsa encrypted
+		memcpy(ciph, op.params[1].tmpref.buffer, len);
+		printf("RSA Encrypted : %s\n", ciph);
+
+		// save rsa encrypted file
+		FILE *ref = fopen("rsa_encrypted_file.txt", "w+");
+		fwrite(ciph, strlen(ciph), 1, ref);
+		fclose(ref);
+		
+
+		// decrypt		
+		res = TEEC_InvokeCommand(&sess, TA_RSA_CMD_DECRYPT,
+				 &op, &err_origin);
+
+		
+		// print rsa decrypted
+		memcpy(clear, op.params[0].tmpref.buffer, len);
+		printf("RSA Decrypted : %s\n", clear);
+
+		// save rsa decrypted file
+		FILE *rdf = fopen("rsa_decrypted_file.txt", "w+");
+		fwrite(clear, strlen(clear), 1, rdf);
+		fclose(rdf);
+		}	
+	}
 	
 
 

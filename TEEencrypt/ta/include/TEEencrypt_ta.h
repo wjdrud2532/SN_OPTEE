@@ -39,7 +39,10 @@
 /* The function IDs implemented in this TA */
 #define TA_TEEencrypt_CMD_ENC_VALUE		0
 #define TA_TEEencrypt_CMD_DEC_VALUE		1
-#define TA_RANDOM_CMD_GENERATE			2
+
+#define TA_RSA_CMD_GENKEYS		   	2
+#define TA_RSA_CMD_ENCRYPT			3
+#define TA_RSA_CMD_DECRYPT			4
 
 #endif /*TA_MYTA_H*/
 
