@@ -72,7 +72,9 @@ int main(int argc, char* argv[])	// for input file
 			       TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
 	
 	memset(&op, 0, sizeof(op));
-	op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_OUTPUT, TEEC_NONE,
+	//op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_OUTPUT, TEEC_NONE,
+	//				 TEEC_NONE, TEEC_NONE);
+	op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INOUT, TEEC_VALUE_INOUT,
 					 TEEC_NONE, TEEC_NONE);
 	
 	// 
@@ -95,7 +97,7 @@ if (strcmp(argv[3], "caesar") == 0) {
 		FILE *file = fopen(argv[2], "r");
 		if(file == NULL)		//if not found
 		{		
-			printf("no file\n");	
+			printf("no fiel\n");	
 			return 0;
 		}
 
@@ -118,7 +120,7 @@ if (strcmp(argv[3], "caesar") == 0) {
 		printf("key : %d\n", op.params[1].value.a );
 
 		// make enc file
-		FILE *encFile = fopen("encrypted_file.txt", "w+");	// 
+		FILE *encFile = fopen("enc_file.txt", "w");	// 
 		if(encFile == NULL)				//
 		{		
 			printf("no file\n");	
@@ -143,30 +145,31 @@ if (strcmp(argv[3], "caesar") == 0) {
 			return 0;
 		}
  
-		// 
+		// read file
 		fgets(enctext, sizeof(enctext), encFile);
 		fgets(enckey, sizeof(enckey), encFile);
 		fclose(encFile);
 
-		// load key
-		memcpy(op.params[0].tmpref.buffer, enctext, len);
-		int key = atoi(enckey);	// char to int 
 		
+		// load key
+		int key = atoi(enckey);	// char to int 
 		op.params[1].value.a = key;
+
+		// load data
+		memcpy(op.params[0].tmpref.buffer, enctext, len);
 
 		// run dec
 		res = TEEC_InvokeCommand(&sess, TA_TEEencrypt_CMD_DEC_VALUE, &op,
 				 &err_origin);
 
-		// print dec text
+		// print data
 		memcpy(ciphertext, op.params[0].tmpref.buffer, len);
 		printf("Decrypted text : %s", ciphertext);
 
-		//memcpy(key, op.params[1].value.a, 1);
 		printf("key : %d\n", key);
 	
 		// make dec file 
-		FILE *decfile = fopen("decrypted_file.txt", "w+");
+		FILE *decfile = fopen("dec_file.txt", "w");
 		if(decfile == NULL)
 		{		
 			printf("no file\n");	
@@ -217,7 +220,7 @@ else if(strcmp(argv[3], "RSA") == 0)
 		printf("RSA Encrypted : %s\n", out_RSA);
 
 		// create RSA file
-		FILE *rsa_enc = fopen("rsa_enc.txt", "w+");
+		FILE *rsa_enc = fopen("rsa_enc.txt", "w");
 		fwrite(out_RSA, strlen(out_RSA), 1, rsa_enc);
 		fclose(rsa_enc);
 		
@@ -227,31 +230,6 @@ else if(strcmp(argv[3], "RSA") == 0)
 	{
 		printf("option error\n");
 	}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

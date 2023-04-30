@@ -160,6 +160,8 @@ static TEE_Result enc_value(uint32_t param_types,
 	int enckey;
 	enckey = tempkey + rootkey;		
 	params[1].value.a = enckey;
+
+	IMSG("key: %u", params[1].value.a);
 	// ================================================================
 
 	return TEE_SUCCESS;
@@ -177,10 +179,13 @@ static TEE_Result dec_value(uint32_t param_types,
 	memcpy(decrypted, in, in_len);
 
 	// load random + root key 	&& calc dec value
+	IMSG("dec key: %u", params[1].value.a);
 	int deckey;
 	deckey = params[1].value.a;
 	deckey -= rootkey;
 	params[1].value.a = deckey;
+
+	IMSG("dec key: %u", params[1].value.a);
 	//===============================================
 
 	for(int i=0; i<in_len;i++){
