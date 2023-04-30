@@ -41,8 +41,8 @@
 #define RSA_MAX_PLAIN_LEN_1024 86 // (1024/8) - 42 (padding)
 #define RSA_CIPHER_LEN_1024 (RSA_KEY_SIZE / 8)
 
-char clear[RSA_MAX_PLAIN_LEN_1024];
-char ciph[RSA_CIPHER_LEN_1024];
+char in_RSA[RSA_MAX_PLAIN_LEN_1024];
+char out_RSA[RSA_CIPHER_LEN_1024];
 //====================================================
 
 int main(int argc, char* argv[])	// for input file
@@ -78,17 +78,26 @@ int main(int argc, char* argv[])	// for input file
 	// 
 	op.params[0].tmpref.buffer = plaintext;
 	op.params[0].tmpref.size = len;
-	op.params[1].value.a = 0;	// for print key
 
+	op.params[1].value.a = -1;		//
+
+	int key;
+
+if (strcmp(argv[3], "caesar") == 0) {
 
 	if(strcmp(argv[1], "-e") == 0)
 	{
 		printf("========================Encryption========================\n");
 
+		//FILE *encFile = fopen("encrypted_file.txt", "w+");
+
 		//file read
 		FILE *file = fopen(argv[2], "r");
 		if(file == NULL)		//if not found
+		{		
+			printf("no file\n");	
 			return 0;
+		}
 
 		// 
 		fgets(plaintext, sizeof(plaintext), file);
@@ -103,16 +112,23 @@ int main(int argc, char* argv[])	// for input file
 		
 		// print enc text
 		memcpy(ciphertext, op.params[0].tmpref.buffer, len);	// copy buffer to ciphertext
-		printf("Encrypted text : %s\n", ciphertext);
-		printf("key : %d\n", op.params[1].value.a);
+		printf("Encrypted text : %s", ciphertext);
+
+		//memcpy(key, op.params[1].value.a, 1);
+		printf("key : %d\n", op.params[1].value.a );
 
 		// make enc file
-		FILE *encFile = fopen("encrypted_file.txt", "w+");	// delete old text
-		if(encFile == NULL)				//if not found
+		FILE *encFile = fopen("encrypted_file.txt", "w+");	// 
+		if(encFile == NULL)				//
+		{		
+			printf("no file\n");	
 			return 0;
+		}
 		fwrite(ciphertext, strlen(ciphertext), 1, encFile);
 		fprintf(encFile, "%d", op.params[1].value.a);
 		fclose(encFile);
+
+		printf("finsh enc\n");
 	}
 
 	else if(strcmp(argv[1], "-d") == 0)
@@ -122,7 +138,10 @@ int main(int argc, char* argv[])	// for input file
 		// load file
 		FILE *encFile = fopen(argv[2], "r");
 		if(encFile == NULL)
+		{		
+			printf("no file\n");	
 			return 0;
+		}
  
 		// 
 		fgets(enctext, sizeof(enctext), encFile);
@@ -132,6 +151,7 @@ int main(int argc, char* argv[])	// for input file
 		// load key
 		memcpy(op.params[0].tmpref.buffer, enctext, len);
 		int key = atoi(enckey);	// char to int 
+		
 		op.params[1].value.a = key;
 
 		// run dec
@@ -140,19 +160,27 @@ int main(int argc, char* argv[])	// for input file
 
 		// print dec text
 		memcpy(ciphertext, op.params[0].tmpref.buffer, len);
-		printf("Decrypted text : %s\n", ciphertext);
-		printf("key : %d\n", op.params[1].value.a);
+		printf("Decrypted text : %s", ciphertext);
+
+		//memcpy(key, op.params[1].value.a, 1);
+		printf("key : %d\n", key);
 	
 		// make dec file 
 		FILE *decfile = fopen("decrypted_file.txt", "w+");
 		if(decfile == NULL)
+		{		
+			printf("no file\n");	
 			return 0;
+		}
 		fwrite(ciphertext, strlen(ciphertext), 1, decfile);
 		fprintf(decfile, "%d", op.params[1].value.a);
 		fclose(decfile);
+
+		printf("finsh dec\n");
 	}
-	
-	else if(strcmp(argv[3], "R") == 0)
+}//end caesar=====================================
+
+else if(strcmp(argv[3], "RSA") == 0)
 	{
 		printf("========================RSA========================\n");
 
@@ -160,55 +188,45 @@ int main(int argc, char* argv[])	// for input file
 					 		TEEC_MEMREF_TEMP_OUTPUT,
 					 		TEEC_NONE, TEEC_NONE);
 	
-		op.params[0].tmpref.buffer = clear;
+		op.params[0].tmpref.buffer = in_RSA;			// RSA max arr
 		op.params[0].tmpref.size =  RSA_MAX_PLAIN_LEN_1024;
-		op.params[1].tmpref.buffer = ciph;
+		op.params[1].tmpref.buffer = out_RSA;
 		op.params[1].tmpref.size =  RSA_CIPHER_LEN_1024;
-		
-		if (!strcmp(argv[1], "-e")){		
+
+		if (!strcmp(argv[1], "-e")){	
+	
 		// read file
-		FILE *pf = fopen(argv[2], "r");
-		if (pf == NULL){
-			printf("not found %s file\n", argv[2]);
+		FILE *file = fopen(argv[2], "r");
+		if (file == NULL){
+			printf("no file\n");
 			return 0;		
 		}
-		fgets(clear, sizeof(clear), pf);
-		fclose(pf);
+		fgets(in_RSA, sizeof(in_RSA), file);
+		fclose(file);
 
-		// generate key
+		// create RSA key
 		res = TEEC_InvokeCommand(&sess, TA_RSA_CMD_GENKEYS, &op, &err_origin);
-
-		// encrypt		
+		
+		// ENC file use RSA key
 		res = TEEC_InvokeCommand(&sess, TA_RSA_CMD_ENCRYPT,
 				 &op, &err_origin);
 
 		
-		// print rsa encrypted
-		memcpy(ciph, op.params[1].tmpref.buffer, len);
-		printf("RSA Encrypted : %s\n", ciph);
+		// print RSA
+		memcpy(out_RSA, op.params[1].tmpref.buffer, len);
+		printf("RSA Encrypted : %s\n", out_RSA);
 
-		// save rsa encrypted file
-		FILE *ref = fopen("rsa_encrypted_file.txt", "w+");
-		fwrite(ciph, strlen(ciph), 1, ref);
-		fclose(ref);
+		// create RSA file
+		FILE *rsa_enc = fopen("rsa_enc.txt", "w+");
+		fwrite(out_RSA, strlen(out_RSA), 1, rsa_enc);
+		fclose(rsa_enc);
 		
-
-		// decrypt		
-		res = TEEC_InvokeCommand(&sess, TA_RSA_CMD_DECRYPT,
-				 &op, &err_origin);
-
-		
-		// print rsa decrypted
-		memcpy(clear, op.params[0].tmpref.buffer, len);
-		printf("RSA Decrypted : %s\n", clear);
-
-		// save rsa decrypted file
-		FILE *rdf = fopen("rsa_decrypted_file.txt", "w+");
-		fwrite(clear, strlen(clear), 1, rdf);
-		fclose(rdf);
 		}	
 	}
-	
+	else
+	{
+		printf("option error\n");
+	}
 
 
 

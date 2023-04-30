@@ -31,6 +31,7 @@
 #include <TEEencrypt_ta.h>
 int rootkey;
 
+
 //TEE_GenerateRandom(&key, sizeof(key));
 
 // for RSA=================================================
@@ -72,8 +73,8 @@ TEE_Result TA_OpenSessionEntryPoint(uint32_t param_types,
 	//	return TEE_ERROR_BAD_PARAMETERS;
 
 	/* Unused parameters */
-	//(void)&params;
-	//(void)&sess_ctx;
+	(void)&params;
+	(void)&sess_ctx;
 
 	//IMSG("Caesar cipher ...\n");
 
@@ -96,7 +97,7 @@ TEE_Result TA_OpenSessionEntryPoint(uint32_t param_types,
 
 void TA_CloseSessionEntryPoint(void __maybe_unused *sess_ctx)
 {
-	//(void)&sess_ctx; /* Unused parameter */
+	(void)&sess_ctx; /* Unused parameter */
 
 	struct rsa_session *sess;
 
@@ -121,7 +122,6 @@ static TEE_Result enc_value(uint32_t param_types,
 	char encrypted [64]={0,};
 	
 	// make random key ================================================
-
 	int tempkey;
 
 	TEE_GenerateRandom(&tempkey, sizeof(tempkey));
@@ -130,6 +130,7 @@ static TEE_Result enc_value(uint32_t param_types,
 		tempkey *= -1;
 	tempkey %= 26;
 
+	DMSG("rand key : %d", tempkey);
 	// ================================================================
 
 
@@ -156,8 +157,9 @@ static TEE_Result enc_value(uint32_t param_types,
 
 
 	// save random key + rootkey  =====================================
-		
-	params[1].value.a = tempkey + rootkey;
+	int enckey;
+	enckey = tempkey + rootkey;		
+	params[1].value.a = enckey;
 	// ================================================================
 
 	return TEE_SUCCESS;
@@ -175,14 +177,16 @@ static TEE_Result dec_value(uint32_t param_types,
 	memcpy(decrypted, in, in_len);
 
 	// load random + root key 	&& calc dec value
-	int tempkey = params[1].value.a;
-	tempkey -= rootkey;
-	params[1].value.a = tempkey;	//save dec 
+	int deckey;
+	deckey = params[1].value.a;
+	deckey -= rootkey;
+	params[1].value.a = deckey;
+	//===============================================
 
 	for(int i=0; i<in_len;i++){
 		if(decrypted[i]>='a' && decrypted[i] <='z'){
 			decrypted[i] -= 'a';
-			decrypted[i] -= tempkey;
+			decrypted[i] -= deckey;
 			decrypted[i] += 26;
 			decrypted[i] = decrypted[i] % 26;
 			decrypted[i] += 'a';
@@ -190,7 +194,7 @@ static TEE_Result dec_value(uint32_t param_types,
 		}
 		else if (decrypted[i] >= 'A' && decrypted[i] <= 'Z') {
 			decrypted[i] -= 'A';
-			decrypted[i] -= tempkey;
+			decrypted[i] -= deckey;
 			decrypted[i] += 26;
 			decrypted[i] = decrypted[i] % 26;
 			decrypted[i] += 'A';
@@ -203,9 +207,12 @@ static TEE_Result dec_value(uint32_t param_types,
 }
 
 
+//Get Randomkey=====================================================================
+
+
+//==================================================================================
+
 //RSA ===============================================================================
-
-
 
 TEE_Result prepare_rsa_operation(TEE_OperationHandle *handle, uint32_t alg, TEE_OperationMode mode, TEE_ObjectHandle key) {
 	TEE_Result ret = TEE_SUCCESS;	
@@ -358,6 +365,7 @@ TEE_Result TA_InvokeCommandEntryPoint(void __maybe_unused *sess_ctx,
 		return enc_value(param_types, params);
 	case TA_TEEencrypt_CMD_DEC_VALUE:
 		return dec_value(param_types, params);
+
 	case TA_RSA_CMD_GENKEYS:
 		return RSA_create_key_pair(sess_ctx);
 	case TA_RSA_CMD_ENCRYPT:
